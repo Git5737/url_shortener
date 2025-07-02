@@ -59,10 +59,23 @@ jobs:
           echo 'HTTP_SERVER_PASSWORD=${{ secrets.AUTH_PASS }}' | sudo tee -a ${{ env.ENV_FILE_PATH }} > /dev/null && \
           sudo chmod 600 ${{ env.ENV_FILE_PATH }} && \
           sudo chown ubuntu:ubuntu ${{ env.ENV_FILE_PATH }}"
-      - name: Copy systemd service file
+      - name: Upload systemd service file
         run: |
-          scp -i deploy_key.pem -o StrictHostKeyChecking=no ${{ github.workspace }}/deployment/url-shortener.service ${{ env.HOST }}:/tmp/url-shortener.service
-          ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "sudo mv /tmp/url-shortener.service /etc/systemd/system/url-shortener.service"
+          scp -i deploy_key.pem -o StrictHostKeyChecking=no \
+            ${{ github.workspace }}/deployment/url-shortener.service \
+            ${{ env.HOST }}:/tmp/url-shortener.service
+      - name: Move service file to /etc/systemd/system
+        run: |
+          ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "\
+            sudo mv /tmp/url-shortener.service /etc/systemd/system/url-shortener.service && \
+            sudo chown root:root /etc/systemd/system/url-shortener.service && \
+            sudo chmod 644 /etc/systemd/system/url-shortener.service"
+      - name: Reload and restart service
+        run: |
+          ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "\
+            sudo systemctl daemon-reload && \
+            sudo systemctl restart url-shortener.service && \
+            sudo systemctl status url-shortener.service"
       - name: Fix permissions of systemd service
         run: |
           ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "sudo chown root:root /etc/systemd/system/url-shortener.service && sudo chmod 644 /etc/systemd/system/url-shortener.service"
