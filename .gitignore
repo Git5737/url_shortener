@@ -36,3 +36,6 @@ fyne_app
 coverage.*
 *.coverprofile
 *.prof
+
+#Privat data
+local.yaml
